@@ -45,7 +45,6 @@ namespace FirstPerson
       if (Keyboard.current.dKey.isPressed) dir.x += 1;
 
       Vector3 realDir = transform.TransformDirection(new Vector3(dir.x, 0f, dir.y).normalized);
-
       _rb.linearVelocity = new Vector3(realDir.x * _ms, _rb.linearVelocity.y, realDir.z * _ms);
     }
 
