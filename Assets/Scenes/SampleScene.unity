@@ -131,7 +131,7 @@ GameObject:
   - component: {fileID: 92508859}
   - component: {fileID: 92508858}
   - component: {fileID: 92508857}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -629,7 +629,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!114 &1013516007
 MonoBehaviour:
@@ -645,6 +645,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FirstPerson.PlayerController
   _sensibility: {x: 0.1, y: 0.1}
   _camTransform: {fileID: 457141006}
+  _ms: 10
+  _jumpForce: 5
 --- !u!1 &1145682436
 GameObject:
   m_ObjectHideFlags: 0
