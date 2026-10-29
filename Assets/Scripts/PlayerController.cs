@@ -17,28 +17,28 @@ namespace FirstPerson
     [SerializeField] private float _sprintMsMultiplyer = 2f;
     [SerializeField] private float _jumpForce = 5;
 
+    [Header("Jetpack")]
+    [SerializeField] private float _jetpackForce = 2;
+    [SerializeField] private float _jetpackRechargeTime = 0.5f;
+    [SerializeField] private float _jetpackRechargeOffset = 0.5f;
+    [SerializeField] private float _jetpackConsumeTime = 1;
+    public float JetpackFuel { get; private set; } = 1;
+    private float _jetpackRechargeDelay;
+    private bool _wasJetpackDepleted;
+    private bool _isJetpackActiveWanted;
+    private bool _isJetpackActive;
+
     private bool? _cachedIsGrounded = null;
     private bool IsGrounded => _cachedIsGrounded ??= CheckIsGrounded();
-    // {
-    //   get
-    //   {
-    //     if (_cachedIsGrounded.HasValue) return _cachedIsGrounded.Value;
-
-    //     _cachedIsGrounded = CheckIsGrounded();
-    //     return _cachedIsGrounded.Value;
-    //   }
-    // }
-
-
     private Vector2 _verticalClamp = new(-89, 89);
-
     private float _yaw;
     private float _pitch;
     private Rigidbody _rb;
-
     private Vector3 _wishDir;
     private bool _jumpQueued;
     private bool _isSprinting;
+
+
 
     private void Start()
     {
@@ -48,7 +48,6 @@ namespace FirstPerson
       _rb.freezeRotation = true;
       _rb.interpolation = RigidbodyInterpolation.Interpolate;
 
-      // No friction so the player doesn't stick to walls
       GetComponent<Collider>().material = new PhysicsMaterial("PlayerNoFriction")
       {
         dynamicFriction = 0f,
@@ -74,6 +73,8 @@ namespace FirstPerson
 
       if (_jumpQueued && IsGrounded) Jump();
       _jumpQueued = false;
+
+      Jetpack();
     }
 
     private void ReadMoveInput()
@@ -88,8 +89,12 @@ namespace FirstPerson
       _wishDir = new Vector3(dir.x, 0f, dir.y).normalized;
 
       if (Keyboard.current.spaceKey.wasPressedThisFrame) _jumpQueued = true;
+
       if (Keyboard.current.leftShiftKey.isPressed) _isSprinting = true;
-      else if (_isSprinting) _isSprinting = false;
+      else _isSprinting = false;
+
+      if (Keyboard.current.spaceKey.isPressed) _isJetpackActiveWanted = true;
+      else _isJetpackActiveWanted = false;
     }
 
     private void Move()
@@ -127,6 +132,36 @@ namespace FirstPerson
     private void Jump()
     {
       _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _jumpForce, _rb.linearVelocity.z);
+    }
+
+    private void Jetpack()
+    {
+      _isJetpackActive = _isJetpackActiveWanted && !IsGrounded && JetpackFuel > 0f;
+
+      if (_isJetpackActive)
+      {
+        JetpackFuel = Mathf.Max(0f, JetpackFuel - Time.fixedDeltaTime / _jetpackConsumeTime);
+        if (JetpackFuel <= 0f) _wasJetpackDepleted = true;
+
+        _rb.AddForce(Vector3.up * _jetpackForce, ForceMode.Acceleration);
+        return;
+      }
+
+      if (!IsGrounded || JetpackFuel >= 1f) return;
+
+      if (_wasJetpackDepleted)
+      {
+        _wasJetpackDepleted = false;
+        _jetpackRechargeDelay = _jetpackRechargeOffset;
+      }
+
+      if (_jetpackRechargeDelay > 0f)
+      {
+        _jetpackRechargeDelay -= Time.fixedDeltaTime;
+        return;
+      }
+
+      JetpackFuel = Mathf.Min(1f, JetpackFuel + Time.fixedDeltaTime / _jetpackRechargeTime);
     }
 
     private void RotateCamera()
