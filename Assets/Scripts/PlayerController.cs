@@ -10,7 +10,9 @@ namespace FirstPerson
     [Tooltip("The mouse sensibility as x: horizontal, y: vertical")]
     [SerializeField] private Vector2 _sensibility = new(0.1f, 0.1f);
     [SerializeField] private Transform _camTransform;
-    [SerializeField] private float _ms = 10;
+    [SerializeField] private float _movementSpeed = 10;
+    [SerializeField] private float _sidewaysMsMultiplyer = 0.75f;
+    [SerializeField] private float _backwardsMsMultiplyer = 0.5f;
     [SerializeField] private float _jumpForce = 5;
     private Vector2 _verticalClamp = new(-89, 89);
 
@@ -70,8 +72,29 @@ namespace FirstPerson
 
     private void Move()
     {
-      // Only add the velocity difference so collision responses aren't overwritten
-      Vector3 target = _rb.rotation * _wishDir * _ms;
+
+
+
+      /**
+      * Could use dot and linearly interpolate between states, however 1 - 0.5 is linear already, we can plot the multipyer
+      * 0.75f + dot * 0.25f
+      * If we wantthe values modifyable we do need the lerp:
+      * dot >= 0f  ? Mathf.Lerp(0.75f, 1.0f, dot) : Mathf.Lerp(0.75f, 0.5f, -dot);
+      * I hoever will use the cheapest with is NO interpolation and just snap for angle quadrants
+      */
+
+
+      Vector3 camForward = _camTransform.forward;
+      camForward.y = 0;
+      camForward.Normalize();
+
+
+      float dot = Vector3.Dot(camForward, _wishDir);
+      float _msMultiplyer = dot > 0.25f ? 1 : dot < -0.25f ? _backwardsMsMultiplyer : _sidewaysMsMultiplyer;
+
+
+      Vector3 target = _rb.rotation * _wishDir * _movementSpeed * _msMultiplyer;
+
       Vector3 current = _rb.linearVelocity;
       _rb.AddForce(new Vector3(target.x - current.x, 0f, target.z - current.z), ForceMode.VelocityChange);
     }
