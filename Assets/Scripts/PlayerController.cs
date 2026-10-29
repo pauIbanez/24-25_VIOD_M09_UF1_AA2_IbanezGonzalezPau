@@ -13,7 +13,23 @@ namespace FirstPerson
     [SerializeField] private float _movementSpeed = 10;
     [SerializeField] private float _sidewaysMsMultiplyer = 0.75f;
     [SerializeField] private float _backwardsMsMultiplyer = 0.5f;
+    [SerializeField] private float _airMsMultiplyer = 0.5f;
+    [SerializeField] private float _sprintMsMultiplyer = 2f;
     [SerializeField] private float _jumpForce = 5;
+
+    private bool? _cachedIsGrounded = null;
+    private bool IsGrounded => _cachedIsGrounded ??= CheckIsGrounded();
+    // {
+    //   get
+    //   {
+    //     if (_cachedIsGrounded.HasValue) return _cachedIsGrounded.Value;
+
+    //     _cachedIsGrounded = CheckIsGrounded();
+    //     return _cachedIsGrounded.Value;
+    //   }
+    // }
+
+
     private Vector2 _verticalClamp = new(-89, 89);
 
     private float _yaw;
@@ -22,6 +38,7 @@ namespace FirstPerson
 
     private Vector3 _wishDir;
     private bool _jumpQueued;
+    private bool _isSprinting;
 
     private void Start()
     {
@@ -50,16 +67,19 @@ namespace FirstPerson
 
     private void FixedUpdate()
     {
+      _cachedIsGrounded = null;
       _rb.MoveRotation(Quaternion.Euler(0f, _yaw, 0f));
 
-      if (!IsGrounded()) { _jumpQueued = false; return; }
-
-      if (_jumpQueued) { Jump(); _jumpQueued = false; return; }
       Move();
+
+      if (_jumpQueued && IsGrounded) Jump();
+      _jumpQueued = false;
     }
 
     private void ReadMoveInput()
     {
+      if (Keyboard.current == null) return;
+
       Vector2 dir = Vector2.zero;
       if (Keyboard.current.wKey.isPressed) dir.y += 1;
       if (Keyboard.current.sKey.isPressed) dir.y -= 1;
@@ -68,6 +88,8 @@ namespace FirstPerson
       _wishDir = new Vector3(dir.x, 0f, dir.y).normalized;
 
       if (Keyboard.current.spaceKey.wasPressedThisFrame) _jumpQueued = true;
+      if (Keyboard.current.leftShiftKey.isPressed) _isSprinting = true;
+      else if (_isSprinting) _isSprinting = false;
     }
 
     private void Move()
@@ -83,18 +105,21 @@ namespace FirstPerson
       * I hoever will use the cheapest with is NO interpolation and just snap for angle quadrants
       */
 
+      float forward = _wishDir.z;
+      float multiplier = forward > 0.25f ? 1f
+                   : forward < -0.25f ? _backwardsMsMultiplyer
+                   : _sidewaysMsMultiplyer;
 
-      Vector3 camForward = _camTransform.forward;
-      camForward.y = 0;
-      camForward.Normalize();
+      if (IsGrounded)
+      {
+        if (_isSprinting && forward > 0.25f) multiplier = _sprintMsMultiplyer;
+      }
+      else
+      {
+        multiplier *= _airMsMultiplyer;
+      }
 
-
-      float dot = Vector3.Dot(camForward, _wishDir);
-      float _msMultiplyer = dot > 0.25f ? 1 : dot < -0.25f ? _backwardsMsMultiplyer : _sidewaysMsMultiplyer;
-
-
-      Vector3 target = _rb.rotation * _wishDir * _movementSpeed * _msMultiplyer;
-
+      Vector3 target = _rb.rotation * _wishDir * _movementSpeed * multiplier;
       Vector3 current = _rb.linearVelocity;
       _rb.AddForce(new Vector3(target.x - current.x, 0f, target.z - current.z), ForceMode.VelocityChange);
     }
@@ -117,6 +142,6 @@ namespace FirstPerson
       _camTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
     }
 
-    private bool IsGrounded() => Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 0.2f, LayerMask.GetMask("Ground"));
+    private bool CheckIsGrounded() => Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 0.2f, LayerMask.GetMask("Ground"));
   }
 }
