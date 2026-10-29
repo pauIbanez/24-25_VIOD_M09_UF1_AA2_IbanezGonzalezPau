@@ -143,7 +143,7 @@ namespace FirstPerson
         JetpackFuel = Mathf.Max(0f, JetpackFuel - Time.fixedDeltaTime / _jetpackConsumeTime);
         if (JetpackFuel <= 0f) _wasJetpackDepleted = true;
 
-        _rb.AddForce(Vector3.up * _jetpackForce, ForceMode.Acceleration);
+        _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _jetpackForce, _rb.linearVelocity.z);
         return;
       }
 
